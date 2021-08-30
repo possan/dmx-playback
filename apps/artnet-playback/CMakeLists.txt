@@ -1,8 +1,8 @@
-# include_directories(../vendor)
+include_directories(../vendor)
 
-#if (GPIO)
-add_definitions(-DGPIO)
-#endif (GPIO)
+if (GPIO)
+    add_definitions(-DGPIO)
+endif (GPIO)
 
 find_package(PkgConfig)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
@@ -23,6 +23,9 @@ include_directories(
 add_executable (
     artnet-playback
     main.cpp
+    config.cpp
+    player.cpp
+    artnetsender.cpp
 )
 
 target_link_libraries(

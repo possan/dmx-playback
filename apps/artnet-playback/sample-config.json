@@ -1,0 +1,99 @@
+{
+    "video": "input.mov",
+    "events": [
+        {
+            "description": "Send one-time reset 1/2",
+            "type": "gpio",
+            "when": 1,
+            "gpio_pin": 3,
+            "gpio_level": 1,
+            "limit": 1
+        },
+        {
+            "description": "Send one-time reset 2/2",
+            "type": "gpio",
+            "when": 2,
+            "gpio_pin": 3,
+            "gpio_level": 1,
+            "limit": 1
+        },
+        {
+            "description": "Send soft sync 1/2",
+            "type": "gpio",
+            "when": 3,
+            "gpio_pin": 4,
+            "gpio_level": 1
+        },
+        {
+            "description": "Send soft sync 2/2",
+            "type": "gpio",
+            "when": 4,
+            "gpio_pin": 4,
+            "gpio_level": 1
+        },
+        {
+            "description": "Turn on led 1",
+            "type": "gpio",
+            "when": 100,
+            "gpio_pin": 5,
+            "gpio_level": 1
+        },
+        {
+            "description": "Turn off led 1",
+            "type": "gpio",
+            "when": 200,
+            "gpio_pin": 5,
+            "gpio_level": 0
+        }
+    ],
+    "targets": [
+        {
+            "address": "192.168.1.100",
+            "port": 6454,
+            "universes": [
+                {
+                    "universe": 0,
+                    "type": "dmx512row",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "universe": 1,
+                    "type": "dmx512row",
+                    "x": 0,
+                    "y": 1
+                },
+                {
+                    "universe": 2,
+                    "type": "dmx512row",
+                    "x": 0,
+                    "y": 2
+                },
+                {
+                    "universe": 3,
+                    "type": "dmx512row",
+                    "x": 0,
+                    "y": 3
+                },
+                {
+                    "universe": 4,
+                    "type": "dmx512row",
+                    "x": 0,
+                    "y": 4
+                }
+            ]
+        },
+        {
+            "address": "192.168.1.101",
+            "port": 6454,
+            "universes": [
+                {
+                    "universe": 0,
+                    "type": "dmx512row",
+                    "x": 0,
+                    "y": 10
+                }
+            ]
+        }
+    ]
+}
