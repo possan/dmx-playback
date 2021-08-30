@@ -23,4 +23,3 @@ target_link_directories(
     artnet-recorder
     PUBLIC ${LIBPNG_LIBRARY_DIRS}
 )
-

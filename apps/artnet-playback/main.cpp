@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-// #include <sys/socket.h>
+#include <sys/socket.h>
 #ifdef __has_include // C++17, supported as extension to C++11 in clang, GCC 5+, vs2015
 #  if __has_include(<endian.h>)
 #    include <endian.h> // gnu libc normally provides, linux
@@ -13,7 +13,7 @@
 #    include <machine/endian.h> //open bsd, macos
 #  endif
 #endif
-// #include <netinet/in.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <glib.h>
 #include <gio/gio.h>
@@ -268,8 +268,10 @@ static GstFlowReturn gst_artnetvideosink_preroll(GstBaseSink* parent, GstBuffer*
 {
   GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK (parent);
 
+  /*
   if (!artnet_video_sink->silent)
     printf("p\n");
+  */
 
   return GST_FLOW_OK;
 }//end gst_artnetvideosink_preroll.
@@ -278,8 +280,10 @@ static gboolean gst_artnetvideosink_event(GstBaseSink* parent, GstEvent* event)
 {
   GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK (parent);
 
+  /*
   if (!artnet_video_sink->silent)
     printf("e\n");
+  */
 
   return GST_BASE_SINK_CLASS(parent_class)->event(parent, event);
 }//end gst_artnetvideosink_event.
@@ -426,7 +430,6 @@ static void artnet_sending_thread(GTask *task, gpointer source_object, gpointer 
       // send artnet dmx
 
       for(int u=0; u<NUM_UNIVERSES; u++) {
-
         ArtnetDmxHeader *dmxpacket = (ArtnetDmxHeader *)&temppacket;
         memset(dmxpacket, 0, sizeof(ArtnetDmxHeader) + 512);
         memcpy(dmxpacket->identifier, "Art-Net\0", 8);
@@ -529,6 +532,12 @@ static gboolean register_artnet_plugin_init(GstPlugin *plugin) {
 
 
 int main(int argc, char *argv[]) {
+
+  if (argc != 2) {
+    printf("artnet-playback [input.mov]\n");
+    return 1;
+  }
+
   CustomData data;
   GstBus *bus;
   GstStateChangeReturn ret;
@@ -580,7 +589,13 @@ int main(int argc, char *argv[]) {
 
   /* Set the URI to play */
   // g_object_set (data.playbin, "uri", "https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_cropped_multilingual.webm", NULL);
-  g_object_set (data.playbin, "uri", "file:///Users/possan/Projects/dmx-playback/apps/build/combined.mov", NULL);
+
+  char buf[1024];
+  char buf2[1024];
+  realpath(argv[1], buf);
+  sprintf(buf2, "file://%s", buf);
+  printf("Loading \"%s\"\n", buf2);
+  g_object_set (data.playbin, "uri", buf2, NULL);
   // g_object_set (data.playbin, "uri", "file://output.mp4", NULL);
 
   /* Set flags to show Audio and Video but ignore Subtitles */
@@ -788,6 +803,11 @@ static void analyze_streams (CustomData *data) {
     data->current_video, data->current_audio, data->current_text);
   g_print ("Type any number and hit ENTER to select a different audio stream\n");
 }
+
+
+
+
+
 
 /* Process messages from GStreamer */
 static gboolean handle_message (GstBus *bus, GstMessage *msg, CustomData *data) {
