@@ -22,7 +22,9 @@
 #include <gst/video/video.h>
 #include <gst/video/gstvideosink.h>
 
-
+#if GPIO
+#include <wiringPi.h>
+#endif
 
 
 

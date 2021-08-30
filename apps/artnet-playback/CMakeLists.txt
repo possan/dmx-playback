@@ -1,5 +1,9 @@
 # include_directories(../vendor)
 
+#if (GPIO)
+add_definitions(-DGPIO)
+#endif (GPIO)
+
 find_package(PkgConfig)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 pkg_check_modules(GIO REQUIRED gio-2.0)
