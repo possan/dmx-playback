@@ -1,16 +1,19 @@
-include_directories(../vendor)
+# include_directories(../vendor)
 
 find_package(PkgConfig)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
-pkg_check_modules(GSTREAMVERVIDEO REQUIRED gstreamer-video-1.0)
+pkg_check_modules(GSTREAMERPLUGBASE REQUIRED gstreamer-plugins-base-1.0)
+pkg_check_modules(GSTREAMERVIDEO REQUIRED gstreamer-video-1.0)
 
 include_directories(
+    AFTER
     ${GLIB_INCLUDE_DIRS}
     ${GIO_INCLUDE_DIRS}
     ${GSTREAMER_INCLUDE_DIRS}
-    ${GSTREAMVERVIDEO_INCLUDE_DIRS}
+    ${GSTREAMERPLUGBASE_INCLUDE_DIRS}
+    ${GSTREAMERVIDEO_INCLUDE_DIRS}
 )
 
 add_executable (
@@ -23,7 +26,8 @@ target_link_libraries(
     ${GLIB_LIBRARIES}
     ${GIO_LIBRARIES}
     ${GSTREAMER_LIBRARIES}
-    ${GSTREAMVERVIDEO_LIBRARIES}
+    ${GSTREAMERPLUGBASE_LIBRARIES}
+    ${GSTREAMERVIDEO_LIBRARIES}
 )
 
 target_link_directories(
@@ -31,6 +35,6 @@ target_link_directories(
     PUBLIC ${GLIB_LIBRARY_DIRS}
     PUBLIC ${GIO_LIBRARY_DIRS}
     PUBLIC ${GSTREAMER_LIBRARY_DIRS}
-    PUBLIC ${GSTREAMVERVIDEO_LIBRARY_DIRS}
+    PUBLIC ${GSTREAMERPLUGBASE_LIBRARY_DIRS}
+    PUBLIC ${GSTREAMERVIDEO_LIBRARY_DIRS}
 )
-
