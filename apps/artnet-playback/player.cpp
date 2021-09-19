@@ -107,7 +107,9 @@ static void gst_artnetvideosink_class_init(GstArtnetVideoSinkClass *klass)
     gst_element_class_add_static_pad_template(gstelement_class, &sinkpadtemplate);
 
     gstbasesink_class->render = GST_DEBUG_FUNCPTR(gst_artnetvideosink_render);
+    // gstbasesink_class->render = NULL;
     gstbasesink_class->preroll = GST_DEBUG_FUNCPTR(gst_artnetvideosink_preroll);
+    // gstbasesink_class->preroll = NULL;
     gstbasesink_class->event = GST_DEBUG_FUNCPTR(gst_artnetvideosink_event);
     gstbasesink_class->query = GST_DEBUG_FUNCPTR(gst_artnetvideosink_query);
     gstbasesink_class->start = GST_DEBUG_FUNCPTR(gst_artnetvideosink_start);
@@ -225,7 +227,6 @@ static GstFlowReturn gst_artnetvideosink_render(GstBaseSink *parent, GstBuffer *
 {
     printf("_render\n");
 
-    /*
     GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK(parent);
 
     gsize s = gst_buffer_get_size(buffer);
@@ -245,8 +246,7 @@ static GstFlowReturn gst_artnetvideosink_render(GstBaseSink *parent, GstBuffer *
     gst_memory_unmap(mem, &info);
 
     gst_memory_unref(mem);
-    */
-
+    
     // return GST_BASE_SINK_CLASS(parent_class)->render(parent, buffer);
     return GST_FLOW_OK;
 } //end gst_artnetvideosink_render.
@@ -258,6 +258,23 @@ static GstFlowReturn gst_artnetvideosink_show_frame(GstVideoSink *vsink, GstBuff
 
     gsize s = gst_buffer_get_size(buffer);
     printf("show frame, %d bytes\n", s);
+
+
+
+    GstMemory *mem = gst_buffer_get_all_memory(buffer);
+    GstMapInfo info;
+    gst_memory_map(mem, &info, GST_MAP_READ);
+    printf("pixel data: %d %d %d %d %d %d\n", info.data[0], info.data[1], info.data[2], info.data[3], info.data[4], info.data[5]);
+    gst_memory_unmap(mem, &info);
+    gst_memory_unref(mem);
+
+
+
+
+
+
+
+
 
     return GST_FLOW_OK;
 }
