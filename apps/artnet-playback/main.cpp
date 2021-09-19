@@ -10,6 +10,9 @@
 #include <arpa/inet.h>
 #include <glib.h>
 #include <gst/gst.h>
+#if GPIO
+#include <wiringPi.h>
+#endif
 
 #include "config.h"
 #include "player.h"
@@ -22,6 +25,10 @@ int main(int argc, char *argv[]) {
     printf("artnet-playback [config.json]\n");
     return 1;
   }
+
+#if GPIO
+  wiringPiSetup();
+#endif
 
   /* Initialize GStreamer */
   gst_init (&argc, &argv);

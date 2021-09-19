@@ -37,6 +37,13 @@ target_link_libraries(
     ${GSTREAMERVIDEO_LIBRARIES}
 )
 
+if (GPIO)
+    target_link_libraries(
+        artnet-playback
+        wiringPi
+    )
+endif (GPIO)
+
 target_link_directories(
     artnet-playback
     PUBLIC ${GLIB_LIBRARY_DIRS}
