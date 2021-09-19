@@ -54,8 +54,8 @@ struct ArtnetSyncHeader {
 
 
 
-bool udpSend(const uint8_t *packet, uint16_t length ){
-    sockaddr_in servaddr;
+bool udpSend(sockaddr_in servaddr, const uint8_t *packet, uint16_t length ){
+    // sockaddr_in servaddr;
     int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(fd<0){
         printf("failed to open socket\n");
@@ -65,11 +65,11 @@ bool udpSend(const uint8_t *packet, uint16_t length ){
     int broadcast=1;
     setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast);
 
-    bzero(&servaddr,sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-    servaddr.sin_port = htons(ARTNET_PORT);
-    inet_aton("255.255.255.255", &servaddr.sin_addr);
+    // bzero(&servaddr,sizeof(servaddr));
+    // servaddr.sin_family = AF_INET;
+    // servaddr.sin_addr.s_addr = INADDR_ANY;
+    // servaddr.sin_port = htons(ARTNET_PORT);
+    // inet_aton("255.255.255.255", &servaddr.sin_addr);
 
     int ret = sendto(fd, packet, length, 0, (sockaddr*)&servaddr, sizeof(servaddr));
     // printf("sent %d\n", ret);
@@ -136,7 +136,7 @@ void ArtnetConnection::sendUniverse(uint8_t sequence, uint8_t universe, uint16_t
   dmxpacket->datalength = htoartnet_be(length);
   memcpy((uint8_t *)&temppacket + sizeof(ArtnetDmxHeader), channels, length);
 
-  udpSend((const uint8_t *)dmxpacket, sizeof(ArtnetDmxHeader) + length);
+  udpSend(this->servaddr, (const uint8_t *)dmxpacket, sizeof(ArtnetDmxHeader) + length);
 }
 
 
@@ -152,7 +152,7 @@ void ArtnetConnection::sendSync() {
   syncpacket->protver = 14;
   syncpacket->opcode = htoartnet_le(0x5200);
 
-  udpSend((const uint8_t *)&temppacket, sizeof(ArtnetSyncHeader));
+  udpSend(this->servaddr, (const uint8_t *)&temppacket, sizeof(ArtnetSyncHeader));
 }
 
 
