@@ -63,7 +63,11 @@ enum
     PROP_SILENT,
 };
 
-static GstStaticPadTemplate sinkpadtemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS("ANY"));
+static GstStaticPadTemplate sinkpadtemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS(
+    "video/x-raw, "
+    "format = (string) { RGB, RGBA }, "
+    "width = (int) [ 1, 32767 ], "
+    "height = (int) [ 1, 32767 ]; "));
 
 #define gst_artnetvideosink_parent_class parent_class
 
