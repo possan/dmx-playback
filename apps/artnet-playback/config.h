@@ -21,12 +21,15 @@ public:
 
   int limitTimes;
 
+  int fired;
+
   TimedEvent();
   ~TimedEvent();
 
   bool parse(nlohmann::json &node);
 
   void beforeFrame(uint16_t frame);
+  void rewind();
 };
 
 class ArtnetUniverse {

@@ -22,10 +22,6 @@
 #include "artnetsender.h"
 #include "config.h"
 
-
-
-
-
 struct ArtnetDmxHeader {
     char identifier[8];
     unsigned short opcode;
@@ -45,19 +41,9 @@ struct ArtnetSyncHeader {
     unsigned char aux2;
 };
 
-
-
-
-
-
-
-
-
-
 bool udpSend(sockaddr_in servaddr, const uint8_t *packet, uint16_t length ){
-    // sockaddr_in servaddr;
     int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if(fd<0){
+    if (fd < 0) {
         printf("failed to open socket\n");
         return false;
     }
@@ -65,47 +51,18 @@ bool udpSend(sockaddr_in servaddr, const uint8_t *packet, uint16_t length ){
     int broadcast=1;
     setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast);
 
-    // bzero(&servaddr,sizeof(servaddr));
-    // servaddr.sin_family = AF_INET;
-    // servaddr.sin_addr.s_addr = INADDR_ANY;
-    // servaddr.sin_port = htons(ARTNET_PORT);
-    // inet_aton("255.255.255.255", &servaddr.sin_addr);
-
     int ret = sendto(fd, packet, length, 0, (sockaddr*)&servaddr, sizeof(servaddr));
-    // printf("sent %d\n", ret);
     close(fd);
     return ret == length;
 }
 
-
-
-
-
-
-
 uint16_t htoartnet_le(uint16_t host) {
-#if defined(__LITTLE_ENDIAN__)
   return host;
-#else
-  return __builtin_bswap16(host);
-#endif
 }
 
 uint16_t htoartnet_be(uint16_t host) {
-#if defined(__LITTLE_ENDIAN__)
   return __builtin_bswap16(host);
-#else
-  return host;
-#endif
 }
-
-
-
-
-
-
-
-
 
 ArtnetConnection::ArtnetConnection(ArtnetTarget *targetConfiguration) {
   this->targetConfiguration = targetConfiguration;
@@ -124,13 +81,11 @@ ArtnetConnection::~ArtnetConnection() {}
 void ArtnetConnection::sendUniverse(uint8_t sequence, uint8_t universe, uint16_t length, uint8_t *channels) {
   uint8_t temppacket[1024];
 
-  // send artnet dmx
-
   ArtnetDmxHeader *dmxpacket = (ArtnetDmxHeader *)&temppacket;
   memset(dmxpacket, 0, sizeof(ArtnetDmxHeader) + 512);
   memcpy(dmxpacket->identifier, "Art-Net\0", 8);
   dmxpacket->protver = 14;
-  dmxpacket->opcode = htoartnet_le(0x5000);
+  dmxpacket->opcode = 0x5000;
   dmxpacket->sequence = sequence;
   dmxpacket->universe = universe;
   dmxpacket->datalength = htoartnet_be(length);
@@ -139,23 +94,18 @@ void ArtnetConnection::sendUniverse(uint8_t sequence, uint8_t universe, uint16_t
   udpSend(this->servaddr, (const uint8_t *)dmxpacket, sizeof(ArtnetDmxHeader) + length);
 }
 
-
 void ArtnetConnection::sendSync() {
 
   uint8_t temppacket[1024];
-
-  // send artnet sync
 
   ArtnetSyncHeader *syncpacket = (ArtnetSyncHeader *)&temppacket;
   memset(syncpacket, 0, sizeof(ArtnetSyncHeader));
   memcpy(syncpacket->identifier, "Art-Net\0", 8);
   syncpacket->protver = 14;
-  syncpacket->opcode = htoartnet_le(0x5200);
+  syncpacket->opcode = 0x5200;
 
   udpSend(this->servaddr, (const uint8_t *)&temppacket, sizeof(ArtnetSyncHeader));
 }
-
-
 
 void ArtnetConnection::handleVideoFrame(uint16_t frame, uint8_t *pixels, uint16_t width, uint16_t height)
 {
@@ -169,9 +119,6 @@ void ArtnetConnection::handleVideoFrame(uint16_t frame, uint8_t *pixels, uint16_
     }
 }
 
-
-
-
 ArtnetSender::ArtnetSender(Configuration *configuration) {
   this->configuration = configuration;
 }
@@ -179,8 +126,6 @@ ArtnetSender::ArtnetSender(Configuration *configuration) {
 ArtnetSender::~ArtnetSender() {}
 
 void ArtnetSender::handleVideoFrame(uint16_t frame, uint8_t *pixels, uint16_t width, uint16_t height) {
-    // printf("Handle artnet frame %d, %dx%d...\n", frame, width, height);
-
     // Send dmx frames
     for (int t = 0; t < this->configuration->targets.size(); t++)
     {

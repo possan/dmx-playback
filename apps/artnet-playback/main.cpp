@@ -27,7 +27,10 @@ int main(int argc, char *argv[]) {
   }
 
 #if GPIO
-  wiringPiSetup();
+  printf("GPIO Support: Enabled\n");
+  wiringPiSetupGpio();
+#else
+  printf("GPIO Support: Disabled\n");
 #endif
 
   /* Initialize GStreamer */

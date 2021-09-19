@@ -7,6 +7,7 @@ class Player {
 private:
     Configuration *configuration;
     ArtnetSender *sender;
+    uint32_t lastFrame;
 
 public:
     Player(Configuration *configuration, ArtnetSender *sender);

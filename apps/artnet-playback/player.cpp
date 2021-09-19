@@ -11,7 +11,6 @@
 #include <glib.h>
 #include <gio/gio.h>
 #include <gst/gst.h>
-// #include <gst/base/gstbasesink.h>
 #include <gst/video/video.h>
 #include <gst/video/gstvideosink.h>
 
@@ -27,6 +26,12 @@ G_BEGIN_DECLS
 #define GST_ARTNETVIDEOSINK_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_ARTNETVIDEOSINK, GstArtnetVideoSinkClass))
 #define GST_IS_ARTNETVIDEOSINK(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_ARTNETVIDEOSINK))
 #define GST_IS_ARTNETVIDEOSINK_CLASS(obj) (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_ARTNETVIDEOSINK))
+
+typedef struct _FramePacket
+{
+    int frame;
+    GstBuffer *buffer;
+} FramePacket;
 
 typedef struct _GstArtnetVideoSink
 {
@@ -65,7 +70,7 @@ enum
 
 static GstStaticPadTemplate sinkpadtemplate = GST_STATIC_PAD_TEMPLATE("sink", GST_PAD_SINK, GST_PAD_ALWAYS, GST_STATIC_CAPS(
     "video/x-raw, "
-    "format = (string) { RGB, RGBA }, "
+    "format = (string) { RGB }, "
     "width = (int) [ 1, 32767 ], "
     "height = (int) [ 1, 32767 ]; "));
 
@@ -81,7 +86,6 @@ static void gst_artnetvideosink_finalize(GObject *object);
 static GstStateChangeReturn gst_artnetvideosink_change_state(GstElement *element, GstStateChange transition);
 static GstFlowReturn gst_artnetvideosink_render(GstBaseSink *parent, GstBuffer *buffer);
 static GstFlowReturn gst_artnetvideosink_preroll(GstBaseSink *parent, GstBuffer *buffer);
-static GstFlowReturn gst_artnetvideosink_show_frame(GstVideoSink *vsink, GstBuffer *buffer);
 static gboolean gst_artnetvideosink_event(GstBaseSink *parent, GstEvent *event);
 static gboolean gst_artnetvideosink_query(GstBaseSink *parent, GstQuery *query);
 static gboolean gst_artnetvideosink_start(GstBaseSink * basesink);
@@ -101,53 +105,29 @@ static void gst_artnetvideosink_class_init(GstArtnetVideoSinkClass *klass)
     gobject_class->get_property = gst_artnetvideosink_get_property;
     gobject_class->finalize = gst_artnetvideosink_finalize;
 
-    gst_element_class_set_static_metadata(gstelement_class,
-                                          "ArtNet Sink",
-                                          "Sink/Artnet",
-                                          "Description",
-                                          "Author");
-
-    // The one sink pad template
+    gst_element_class_set_static_metadata(gstelement_class, "ArtNet Sink", "Sink/Artnet", "Description", "Author");
     gst_element_class_add_static_pad_template(gstelement_class, &sinkpadtemplate);
 
     gstbasesink_class->render = GST_DEBUG_FUNCPTR(gst_artnetvideosink_render);
-    // gstbasesink_class->render = NULL;
     gstbasesink_class->preroll = GST_DEBUG_FUNCPTR(gst_artnetvideosink_preroll);
-    // gstbasesink_class->preroll = NULL;
     gstbasesink_class->event = GST_DEBUG_FUNCPTR(gst_artnetvideosink_event);
     gstbasesink_class->query = GST_DEBUG_FUNCPTR(gst_artnetvideosink_query);
     gstbasesink_class->start = GST_DEBUG_FUNCPTR(gst_artnetvideosink_start);
     gstbasesink_class->stop = GST_DEBUG_FUNCPTR(gst_artnetvideosink_stop);
     gstbasesink_class->set_caps = GST_DEBUG_FUNCPTR(gst_artnetvideosink_set_caps);
-
-    gstvideosink_class->show_frame = GST_DEBUG_FUNCPTR(gst_artnetvideosink_show_frame);
 }
 
 static void gst_artnetvideosink_init(GstArtnetVideoSink *artnet_video_sink)
 {
-    
-printf("sink init class\n");
-
-    // On this sink class
     artnet_video_sink->pixels = gst_buffer_new_allocate(NULL, 256 * 256 * 3, NULL);
-
-    // On the base class
-    // gst_base_sink_set_sync(GST_BASE_SINK(artnet_video_sink), DEFAULT_SYNC);
-    // gst_base_sink_set_sync (GST_BASE_SINK (fakesink), DEFAULT_SYNC);
-    // gst_base_sink_set_drop_out_of_segment (GST_BASE_SINK (artnet_video_sink), DEFAULT_DROP_OUT_OF_SEGMENT);
-    // gst_base_sink_set_max_lateness (GST_BASE_SINK (artnet_video_sink), -1);
-    // gst_base_sink_set_qos_enabled (GST_BASE_SINK (artnet_video_sink), FALSE);
 }
 
 static void gst_artnetvideosink_finalize(GObject *obj)
 {
     GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK(obj);
-
     gst_buffer_unref(artnet_video_sink->pixels);
-
     G_OBJECT_CLASS(parent_class)->finalize(obj);
 }
-
 
 static gboolean gst_artnetvideosink_start (GstBaseSink * basesink)
 {
@@ -229,74 +209,55 @@ void gst_artnetvideosink_get_property(GObject *object, guint prop_id,
 
 static GstFlowReturn gst_artnetvideosink_render(GstBaseSink *parent, GstBuffer *buffer)
 {
-    printf("_render\n");
-
+    // printf("_render\n");
     GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK(parent);
 
+    GstClockTime timestamp = GST_BUFFER_TIMESTAMP(buffer);
+    float timestampSeconds = (float)timestamp / 1000000000;
+    // printf("start timestamp = %lld (%f)\n", timestamp, timestampSeconds);
+
+    GstClockTime dur  = GST_BUFFER_DURATION(buffer);
+    float durSeconds = (float)dur / 1000000000;
+    // printf("duration = %lld (%f)\n", dur, durSeconds);
+
+    float fps = 1.0f / durSeconds;
+    // printf("fps = %f\n", fps);
+
+    GstClockTime frame = timestamp / dur;
+    printf("frame = %lld\n", frame);
+
     gsize s = gst_buffer_get_size(buffer);
-    printf("r, %d bytes\n", s);
+    // printf("r, %d bytes\n", s);
 
     GstMemory *mem = gst_buffer_get_all_memory(buffer);
-    // GstMemory *mem = gst_buffer_get_all_memory(artnet_video_sink->pixels);
 
     GstMapInfo info;
     gst_memory_map(mem, &info, GST_MAP_READ);
 
     printf("pixel data: %d %d %d %d %d %d\n", info.data[0], info.data[1], info.data[2], info.data[3], info.data[4], info.data[5]);
 
-    // GstBuffer *packet = gst_buffer_copy(buffer);
-    // g_async_queue_push(networkQueue, packet);
+    GstBuffer *bufferpacket = gst_buffer_copy(buffer);
+    FramePacket *packet = new FramePacket();
+    packet->frame = frame;
+    packet->buffer = bufferpacket;
+    g_async_queue_push(networkQueue, packet);
 
     gst_memory_unmap(mem, &info);
 
     gst_memory_unref(mem);
-    
-    // return GST_BASE_SINK_CLASS(parent_class)->render(parent, buffer);
-    return GST_FLOW_OK;
-} //end gst_artnetvideosink_render.
-
-static GstFlowReturn gst_artnetvideosink_show_frame(GstVideoSink *vsink, GstBuffer *buffer)
-{
-    GstBaseSink *bsink = GST_BASE_SINK (vsink);
-    GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK(bsink);
-
-    gsize s = gst_buffer_get_size(buffer);
-    printf("show frame, %d bytes\n", s);
-
-
-
-    GstMemory *mem = gst_buffer_get_all_memory(buffer);
-    GstMapInfo info;
-    gst_memory_map(mem, &info, GST_MAP_READ);
-    printf("pixel data: %d %d %d %d %d %d\n", info.data[0], info.data[1], info.data[2], info.data[3], info.data[4], info.data[5]);
-    gst_memory_unmap(mem, &info);
-    gst_memory_unref(mem);
-
-
-
-
-
-
-
-
 
     return GST_FLOW_OK;
 }
 
 static GstFlowReturn gst_artnetvideosink_preroll(GstBaseSink *parent, GstBuffer *buffer)
 {
-   printf("preroll\n");
    return gst_artnetvideosink_render(parent, buffer);
-   // GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK(parent);
-   // return GST_FLOW_OK;
 }
 
 static gboolean gst_artnetvideosink_event(GstBaseSink *parent, GstEvent *event)
 {
     GstArtnetVideoSink *artnet_video_sink = GST_ARTNETVIDEOSINK(parent);
-
     printf("event %d\n", GST_EVENT_TYPE (event));
-
     return GST_BASE_SINK_CLASS(parent_class)->event(parent, event);
 }
 
@@ -337,33 +298,30 @@ static void artnet_sending_thread(GTask *task, gpointer source_object, gpointer 
     Player *player = (Player *)task_data;
     GError *error = NULL;
 
-    uint32_t sequence = 0;
-
     while (true)
     {
         gpointer ptr = g_async_queue_timeout_pop(networkQueue, 100000);
         if (ptr != NULL)
         {
-            GstBuffer *buffer = (GstBuffer *)ptr;
-            if (buffer)
+            FramePacket *packet = (FramePacket *)ptr;
+            if (packet)
             {
-                gsize sz = gst_buffer_get_size(buffer);
-                if (sz < 100)
-                {
-                    sequence = 0;
-                    printf("Got sequence reset signal\n");
-                }
-                else
-                {
-                    GstMemory *mem = gst_buffer_get_all_memory(buffer);
-                    GstMapInfo info;
-                    gst_memory_map(mem, &info, GST_MAP_READ);
-                    player->handleVideoFrame(sequence, info.data, 256, 256);
-                    gst_memory_unmap(mem, &info);
-                    gst_memory_unref(mem);
-                }
-                gst_buffer_unref(buffer);
-                sequence++;
+	        if (packet->buffer)
+	        {
+	            gsize sz = gst_buffer_get_size(packet->buffer);
+                    // printf("Got packet, %d bytes.\n", sz);
+
+	            GstMemory *mem = gst_buffer_get_all_memory(packet->buffer);
+	            GstMapInfo info;
+	            gst_memory_map(mem, &info, GST_MAP_READ);
+	            player->handleVideoFrame(packet->frame, info.data, 256, 256);
+	            gst_memory_unmap(mem, &info);
+	            gst_memory_unref(mem);
+
+	            gst_buffer_unref(packet->buffer);
+	        }
+
+      		delete(packet);
             }
         }
     }
@@ -489,11 +447,6 @@ static void analyze_streams(CustomData *data)
     g_print("Currently playing video stream %d, audio stream %d and text stream %d\n",
             data->current_video, data->current_audio, data->current_text);
     g_print("Type any number and hit ENTER to select a different audio stream\n");
-
-    // reset counter here
-
-    GstBuffer *packet = gst_buffer_new_allocate(NULL, 1, NULL);
-    g_async_queue_push(networkQueue, packet);
 }
 
 /* Process messages from GStreamer */
@@ -515,7 +468,6 @@ static gboolean handle_message(GstBus *bus, GstMessage *msg, CustomData *data)
     case GST_MESSAGE_EOS:
     {
         g_print("End-Of-Stream reached.\n");
-        // g_main_loop_quit (data->main_loop);
 
         /* restart playback if at end */
         if (!gst_element_seek(data->playbin, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, GST_SEEK_TYPE_SET, 0, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE))
@@ -571,6 +523,7 @@ Player::Player(Configuration *configuration, ArtnetSender *sender)
 {
     this->configuration = configuration;
     this->sender = sender;
+    this->lastFrame = 99999999;
 }
 
 Player::~Player()
@@ -579,11 +532,22 @@ Player::~Player()
 
 void Player::handleVideoFrame(uint16_t frame, uint8_t *pixels, uint16_t width, uint16_t height)
 {
+    if (frame < lastFrame) {
+        printf("Player: Rewinded.\n");
+        for (int u = 0; u < this->configuration->events.size(); u++)
+        {
+             TimedEvent *e = &this->configuration->events[u];
+             e->rewind();
+        }
+    }
+
+    lastFrame = frame;
+
     printf("Handle video frame #%d\n", frame);
     for (int u = 0; u < this->configuration->events.size(); u++)
     {
-        TimedEvent *e = &this->configuration->events[u];
-        e->beforeFrame(frame);
+         TimedEvent *e = &this->configuration->events[u];
+         e->beforeFrame(frame);
     }
 
     this->sender->handleVideoFrame(frame, pixels, width, height);
@@ -614,15 +578,11 @@ int Player::run()
 
     printf("gst_plugin_register_static = %d\n", res);
 
-    /* Create the elements */
     data.playbin = gst_element_factory_make("playbin", NULL);
     if (!data.playbin) {
         g_printerr("Not all elements could be created.\n");
         return -1;
     }
-
-    /* Set the URI to play */
-    // g_object_set (data.playbin, "uri", "https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_cropped_multilingual.webm", NULL);
 
     char buf[1024];
     char buf2[1024];
@@ -630,25 +590,6 @@ int Player::run()
     sprintf(buf2, "file://%s", buf);
     printf("Loading \"%s\"\n", buf2);
     g_object_set(data.playbin, "uri", buf2, NULL);
-
-    /* Set flags to show Audio and Video but ignore Subtitles */
-    /*
-    g_object_get(data.playbin, "flags", &flags, NULL);
-    flags |= GST_PLAY_FLAG_VIDEO | GST_PLAY_FLAG_AUDIO;
-    flags &= ~GST_PLAY_FLAG_TEXT;
-    g_object_set(data.playbin, "flags", flags, NULL);
-    */
-    // GstElement *bin2;
-    // bin2 = gst_bin_new("video_sink_bin");
-    // bin = gst_bin_new ("audio_sink_bin");
-    /*
-    GstElement *clocksync = gst_element_factory_make("clocksync", NULL);
-    if (!clocksync)
-    {
-        g_printerr("clocksync could be created.\n");
-        return -1;
-    }
-    */
 
     GstElement *artnetsink = gst_element_factory_make("artnetvideosink", "videosink");
     if (!artnetsink) {
@@ -658,35 +599,9 @@ int Player::run()
 
     g_object_set(data.playbin, "video-sink", artnetsink, NULL);
 
-    // gst_bin_add_many(GST_BIN(bin2), artnetsink, NULL);
-    // gst_bin_add_many(GST_BIN(data.playbin), artnetsink, NULL);
-    // gst_element_link_many (GST_BIN(bin2), artnetsink, NULL);
-    // g_object_set (artnetsink, "sync", TRUE, NULL);
-    // g_object_set (clocksync, "sync", TRUE, NULL);
-    // if (!gst_element_link_many (artnetsink, NULL)) {
-    //  g_print ("Failed to link one or more elements!\n");
-    //  return -1;
-    // }
-    // GstPad *pad;
-    // GstPad *ghost_pad;
-    // pad = gst_element_get_static_pad(artnetsink, "sink");
-    // ghost_pad = gst_ghost_pad_new("sink", pad);
-    // gst_pad_set_active(pad, TRUE);
-    // gst_pad_set_active(ghost_pad, TRUE);
-    // gst_element_add_pad(data.playbin, ghost_pad);
-    // gst_object_unref (pad);
-    // g_object_set (G_OBJECT (equalizer), "band1", (gdouble)-24.0, NULL);
-    // g_object_set (G_OBJECT (equalizer), "band2", (gdouble)-24.0, NULL);
-    // g_object_set(data.playbin, "video-sink", bin2, NULL);
-    // g_object_set(data.playbin, "video-sink", artnetsink, NULL);
-    // g_object_set (data.playbin, "sync", TRUE, NULL);
-    /* Set connection speed. This will affect some internal decisions of playbin */
-    // g_object_set (data.playbin, "connection-speed", 56, NULL);
-
     bus = gst_element_get_bus(data.playbin);
     gst_bus_add_watch(bus, (GstBusFunc)handle_message, &data);
 
-    /* Start playing */
     ret = gst_element_set_state(data.playbin, GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE)
     {
@@ -705,7 +620,6 @@ int Player::run()
 
     /* Create a GLib Main Loop and set it to run */
     data.main_loop = g_main_loop_new(NULL, FALSE);
-    // g_idle_add_full(G_PRIORITY_HIGH_IDLE, &idlefunc, NULL, NULL);
 
     gpointer user_data = NULL;
     gpointer cake_data = this;

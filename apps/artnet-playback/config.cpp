@@ -12,6 +12,7 @@ TimedEvent::TimedEvent()
 {
     this->limitTimes = 0;
     this->counter = 0;
+    this->fired = 0;
 }
 
 TimedEvent::~TimedEvent()
@@ -48,9 +49,15 @@ bool TimedEvent::parse(nlohmann::json &node) {
 
 void TimedEvent::beforeFrame(uint16_t frame) {
 
-    if (frame != this->frame) {
+    if (this->fired) {
         return;
     }
+
+    if (frame < this->frame) {
+        return;
+    }
+
+    this->fired = 1;
 
     printf("in TimedEvent::beforeFrame %d \"%s\" (%s) (fired %d times before)\n", frame, this->type.c_str(), this->description.c_str(), this->counter);
 
@@ -60,7 +67,6 @@ void TimedEvent::beforeFrame(uint16_t frame) {
     }
 
     if (this->type == "gpio") {
-
 #if GPIO
         printf("  Set GPIO %d to %d\n", this->gpioPin, this->gpioLevel);
         pinMode(this->gpioPin, OUTPUT);
@@ -71,6 +77,10 @@ void TimedEvent::beforeFrame(uint16_t frame) {
     }
 
     this->counter ++;
+}
+
+void TimedEvent::rewind() {
+    this->fired = 0;
 }
 
 ArtnetUniverse::ArtnetUniverse()
