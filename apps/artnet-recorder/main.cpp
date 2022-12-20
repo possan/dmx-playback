@@ -12,9 +12,9 @@ int main(int argc, char **argv) {
     if (argc != 3) {
         printf("Syntax: artnet-recorder [artnet port] [output folder]\n");
         printf("\n");
-        printf("Example: artnet-recorder 6545 output/frame\n");
+        printf("Example: artnet-recorder 6454 output/frame\n");
         printf("  will write frames as output/frame0000.png\n");
-        printf("  then convert it to a video: ffmpeg -framerate 40 -i output/frame%04d.png -f mov -c:v qtrle -pix_fmt rgb24 output.mov\n");
+        printf("  then convert it to a video: ffmpeg -framerate 40 -i output/frame\%04d.png -f mov -c:v qtrle -pix_fmt rgb24 output.mov\n");
         printf("\n");
         return 1;
     }
