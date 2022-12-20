@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
 #include <map>
-#include <string>
 #include <nlohmann/json.hpp>
-
+#include <string>
+#include <vector>
 
 class TimedEvent {
 private:
@@ -78,4 +77,3 @@ public:
 
   bool parse(nlohmann::json &node);
 };
-
