@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <time.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
